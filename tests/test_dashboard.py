@@ -52,3 +52,23 @@ def test_next_agenda_unassigned_first_and_excludes_done():
 def test_nearest_deadline():
     assert db.nearest_deadline(db.flatten(MEETINGS), TODAY) == date(2026, 11, 28)
     assert db.nearest_deadline([], TODAY) is None
+
+
+def test_task_rows_columns_match():
+    rows = db.task_rows(db.flatten(MEETINGS))
+    assert len(rows) == 6
+    assert list(rows[0].keys()) == db.TASK_COLUMNS
+    assert rows[2]["마감"] == "미정"
+    assert rows[0]["회의"] == "2026-11-25 1차"
+
+
+def test_meetings_without_actions_give_empty_table_with_columns():
+    import pandas as pd
+
+    items = db.flatten([{"id": "m0", "date": "2026-11-26", "title": "킥오프", "actions": []}])
+    assert items == []
+    table = pd.DataFrame(db.task_rows(items), columns=db.TASK_COLUMNS)
+    assert list(table["상태"]) == []  # 컬럼이 있어 KeyError 가 나지 않음
+    assert db.summary(items, TODAY)["done_rate"] == 0
+    assert db.by_member(items) == [] and db.next_agenda(items) == []
+    assert db.nearest_deadline(items, TODAY) is None

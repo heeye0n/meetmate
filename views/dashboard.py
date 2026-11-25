@@ -52,31 +52,28 @@ with right:
 
 # ---------- 전체 할 일 + 상태 변경 ----------
 st.subheader("전체 할 일")
-st.caption("상태를 바꾸면 바로 저장돼요.")
-table = pd.DataFrame([{
-    "상태": i["status"],
-    "할 일": i["task"],
-    "담당": i.get("assignee") or "미정",
-    "마감": i.get("due") or "미정",
-    "회의": f"{i['meeting_date']} {i['meeting_title']}".strip(),
-    "이슈": i.get("issue_url") or None,
-} for i in items])
-edited = st.data_editor(
-    table, key="status_editor", hide_index=True, width="stretch", num_rows="fixed",
-    disabled=["할 일", "담당", "마감", "회의", "이슈"],
-    column_config={
-        "상태": st.column_config.SelectboxColumn(options=storage.STATUSES, required=True),
-        "이슈": st.column_config.LinkColumn(display_text="열기"),
-    },
-)
-changed = False
-for item, new_status in zip(items, edited["상태"]):
-    if new_status != item["status"]:
-        storage.update_action(item["meeting_id"], item["index"], status=new_status)
-        changed = True
-if changed:
-    st.toast("상태를 저장했어요.")
-    st.rerun()
+if not items:
+    # 할 일이 0개인 회의만 있으면 표를 건너뛴다 (빈 DataFrame 에 컬럼이 없어 KeyError 나던 문제)
+    st.info("저장된 회의에 할 일이 아직 없어요. 회의록 정리에서 할 일을 추출해 저장하면 여기에 나타나요.")
+else:
+    st.caption("상태를 바꾸면 바로 저장돼요.")
+    table = pd.DataFrame(db.task_rows(items), columns=db.TASK_COLUMNS)
+    edited = st.data_editor(
+        table, key="status_editor", hide_index=True, width="stretch", num_rows="fixed",
+        disabled=["할 일", "담당", "마감", "회의", "이슈"],
+        column_config={
+            "상태": st.column_config.SelectboxColumn(options=storage.STATUSES, required=True),
+            "이슈": st.column_config.LinkColumn(display_text="열기"),
+        },
+    )
+    changed = False
+    for item, new_status in zip(items, edited["상태"]):
+        if new_status != item["status"]:
+            storage.update_action(item["meeting_id"], item["index"], status=new_status)
+            changed = True
+    if changed:
+        st.toast("상태를 저장했어요.")
+        st.rerun()
 
 # ---------- 다음 회의 ----------
 st.subheader("🗓️ 다음 회의 준비")

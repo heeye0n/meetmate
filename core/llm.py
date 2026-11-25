@@ -1,7 +1,7 @@
 """LLM 호출 모듈.
 
 - 제공자 교체: .env 의 LLM_PROVIDER (openrouter | factchat), LLM_MODEL
-- JSON 응답만 받는다: 파싱 실패 시 1회 재요청, 그래도 실패하면 LLMError
+- JSON 응답만 받는다: 파싱 실패·네트워크 오류·429/5xx 는 1회 재시도, 그래도 실패하면 LLMError
 - 같은 입력은 data/cache/ 에 캐시 (무료 API 한도 절약)
 - DEMO_MODE=true 면 API 대신 samples/demo_responses/<demo_key>.json 반환
 """
@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 import requests
@@ -23,10 +24,20 @@ DEMO_DIR = ROOT / "samples" / "demo_responses"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 FACTCHAT_URL = "https://factchat-cloud.mindlogic.ai/v1/gateway/claude/v1/messages"
 TIMEOUT_SEC = 60
+RETRY_WAIT_SEC = 1.5
+DEMO_HINT = " 계속 안 되면 .env 에서 DEMO_MODE=true 로 바꿔 오프라인 데모로 시연할 수 있어요."
+FORMAT_ERROR = "AI 응답 형식이 예상과 달라요. .env 의 LLM_PROVIDER·LLM_MODEL 설정을 확인하거나 잠시 후 다시 시도하세요."
+
+# 재시도 대기 함수 (테스트에서 monkeypatch 로 바꿔 실제로 기다리지 않게 한다)
+_sleep = time.sleep
 
 
 class LLMError(Exception):
     """사용자에게 그대로 보여줄 수 있는 한국어 오류 메시지를 담는다."""
+
+
+class RetryableLLMError(LLMError):
+    """잠시 후 다시 시도하면 나아질 수 있는 오류 (429, 5xx)."""
 
 
 def get_config() -> dict:
@@ -79,7 +90,14 @@ def _call_openrouter(model: str, key: str, system_prompt: str, user_text: str) -
         timeout=TIMEOUT_SEC,
     )
     _raise_for_status(resp)
-    return resp.json()["choices"][0]["message"]["content"]
+    # 200 이어도 {"error":...}, choices: [], HTML 본문 등이 올 수 있다
+    try:
+        content = resp.json()["choices"][0]["message"]["content"]
+        if content is not None and not isinstance(content, str):
+            raise TypeError("content 가 문자열이 아님")
+        return content or ""
+    except (KeyError, IndexError, TypeError, ValueError):
+        raise LLMError(FORMAT_ERROR) from None
 
 
 def _call_factchat(model: str, key: str, system_prompt: str, user_text: str) -> str:
@@ -102,8 +120,13 @@ def _call_factchat(model: str, key: str, system_prompt: str, user_text: str) -> 
         timeout=TIMEOUT_SEC,
     )
     _raise_for_status(resp)
-    blocks = resp.json().get("content", [])
-    return "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+    try:
+        blocks = resp.json()["content"]
+        if not isinstance(blocks, list) or not all(isinstance(b, dict) for b in blocks):
+            raise TypeError("content 블록 형식이 다름")
+        return "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+    except (KeyError, IndexError, TypeError, ValueError):
+        raise LLMError(FORMAT_ERROR) from None
 
 
 def _raise_for_status(resp: requests.Response) -> None:
@@ -115,8 +138,11 @@ def _raise_for_status(resp: requests.Response) -> None:
     if code == 404:
         raise LLMError(f"모델을 찾을 수 없어요 (HTTP 404). .env 의 LLM_MODEL 이름을 확인하세요.")
     if code == 429:
-        raise LLMError("요청 한도를 넘었어요 (HTTP 429). 잠시 후 다시 시도하거나 DEMO_MODE 를 켜세요.")
-    raise LLMError(f"AI 서버 오류가 났어요 (HTTP {code}). 잠시 후 다시 시도하세요.")
+        raise RetryableLLMError("요청 한도를 넘었어요 (HTTP 429). 잠시 후 다시 시도하세요.")
+    if code >= 500:
+        raise RetryableLLMError(f"AI 서버 오류가 났어요 (HTTP {code}). 잠시 후 다시 시도하세요.")
+    # 그 밖의 4xx 는 다시 보내도 같은 결과라 재시도하지 않는다
+    raise LLMError(f"AI 요청이 거절됐어요 (HTTP {code}). .env 의 LLM_PROVIDER·LLM_MODEL 설정을 확인하세요.")
 
 
 def ask_json(system_prompt: str, user_text: str, *, demo_key: str | None = None, use_cache: bool = True) -> dict:
@@ -146,23 +172,39 @@ def ask_json(system_prompt: str, user_text: str, *, demo_key: str | None = None,
     call = _call_factchat if cfg["provider"] == "factchat" else _call_openrouter
     system = system_prompt + "\n\n반드시 JSON 객체 하나만 출력하라. 설명 문장이나 코드 블록 없이."
 
-    last_error = None
+    last_error: LLMError | None = None
+    json_retry = False
     for attempt in range(2):
-        user = user_text if attempt == 0 else user_text + "\n\n(이전 응답이 올바른 JSON이 아니었다. JSON 객체만 다시 출력하라.)"
+        if json_retry:
+            user = user_text + "\n\n(이전 응답이 올바른 JSON이 아니었다. JSON 객체만 다시 출력하라.)"
+        else:
+            user = user_text
         try:
             text = call(cfg["model"], key, system, user)
         except requests.Timeout:
-            raise LLMError(f"AI 응답이 {TIMEOUT_SEC}초 안에 오지 않았어요. 다시 시도하세요.")
+            last_error = LLMError(f"AI 응답이 {TIMEOUT_SEC}초 안에 오지 않았어요. 다시 시도하세요.")
         except requests.ConnectionError:
-            raise LLMError("인터넷 연결을 확인하세요. 오프라인이면 DEMO_MODE=true 로 시연할 수 있어요.")
-        try:
-            data = extract_json(text)
-        except (ValueError, json.JSONDecodeError) as e:
+            last_error = LLMError("AI 서버에 연결하지 못했어요. 인터넷 연결을 확인하세요.")
+        except requests.RequestException:
+            last_error = LLMError("AI 서버와 통신하는 중 오류가 났어요. 잠시 후 다시 시도하세요.")
+        except RetryableLLMError as e:
             last_error = e
-            continue
-        if use_cache:
-            CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            cache.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        return data
+        except LLMError as e:
+            # 401/403/404, 응답 형식 오류 등은 다시 보내도 같으므로 바로 안내
+            raise LLMError(f"{e}{DEMO_HINT}") from None
+        else:
+            try:
+                data = extract_json(text)
+            except ValueError as e:  # json.JSONDecodeError 포함
+                last_error = LLMError(f"AI 응답을 JSON으로 읽지 못했어요 ({e}). 다시 시도하거나 모델을 바꿔 보세요.")
+                json_retry = True
+                continue
+            if use_cache:
+                CACHE_DIR.mkdir(parents=True, exist_ok=True)
+                cache.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            return data
+        # 네트워크·429·5xx: 잠깐 기다렸다가 1회 재시도
+        if attempt == 0:
+            _sleep(RETRY_WAIT_SEC)
 
-    raise LLMError(f"AI 응답을 JSON으로 읽지 못했어요 ({last_error}). 다시 시도하거나 모델을 바꿔 보세요.")
+    raise LLMError(f"{last_error}{DEMO_HINT}") from None

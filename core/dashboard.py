@@ -17,6 +17,22 @@ def flatten(meetings: list[dict]) -> list[dict]:
     return items
 
 
+# 대시보드 "전체 할 일" 표의 컬럼 (할 일이 0개여도 컬럼이 있어야 해서 명시)
+TASK_COLUMNS = ["상태", "할 일", "담당", "마감", "회의", "이슈"]
+
+
+def task_rows(items: list[dict]) -> list[dict]:
+    """전체 할 일 표에 넣을 행 목록 (TASK_COLUMNS 순서)."""
+    return [{
+        "상태": i["status"],
+        "할 일": i["task"],
+        "담당": i.get("assignee") or UNASSIGNED,
+        "마감": i.get("due") or UNASSIGNED,
+        "회의": f"{i['meeting_date']} {i['meeting_title']}".strip(),
+        "이슈": i.get("issue_url") or None,
+    } for i in items]
+
+
 def _due(item) -> date | None:
     try:
         return date.fromisoformat(item["due"]) if item.get("due") else None
