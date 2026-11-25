@@ -33,7 +33,7 @@ def load_sample(key: str):
     title = re.search(r"안건:\s*(.+)", text)
     if title:
         st.session_state["meeting_title"] = title.group(1).strip()
-    for k in ("extracted", "meeting_id", "issue_results"):
+    for k in ("minutes_extracted", "meeting_id", "issue_results"):
         st.session_state.pop(k, None)
 
 
@@ -48,7 +48,7 @@ def load_upload():
             break
         except UnicodeDecodeError:
             continue
-    for k in ("extracted", "meeting_id", "issue_results"):
+    for k in ("minutes_extracted", "meeting_id", "issue_results"):
         st.session_state.pop(k, None)
 
 
@@ -73,13 +73,13 @@ if st.button("🔍 할 일 추출", type="primary", disabled=not minutes_text.st
     demo_key = next((k for k in SAMPLES if minutes_text == sample_text(k)), None)
     with st.spinner("AI가 회의록을 읽는 중..."):
         try:
-            st.session_state["extracted"] = extract_actions(minutes_text, members, meeting_date, demo_key=demo_key)
+            st.session_state["minutes_extracted"] = extract_actions(minutes_text, members, meeting_date, demo_key=demo_key)
             st.session_state.pop("meeting_id", None)
             st.session_state.pop("issue_results", None)
         except LLMError as e:
             st.error(str(e))
 
-ext = st.session_state.get("extracted")
+ext = st.session_state.get("minutes_extracted")
 if not ext:
     st.stop()
 

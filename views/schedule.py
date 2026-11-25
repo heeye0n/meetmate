@@ -119,7 +119,7 @@ with tab_chat:
         if btn.button(label, width="stretch"):
             st.session_state["chat_text"] = (ROOT / "samples" / f"{key}.txt").read_text(encoding="utf-8")
             st.session_state["sample_key"] = key
-            st.session_state.pop("extracted", None)
+            st.session_state.pop("schedule_extracted", None)
 
     chat_text = st.text_area("단톡방 대화 붙여넣기", key="chat_text", height=220,
                              placeholder="[민수] 나는 화요일 3시 이후 괜찮아\n[지은] 화요일은 5시 이후 가능 ...")
@@ -129,11 +129,11 @@ with tab_chat:
         demo_key = sample_key if sample_key and chat_text == (ROOT / "samples" / f"{sample_key}.txt").read_text(encoding="utf-8") else None
         with st.spinner("AI가 대화를 읽는 중..."):
             try:
-                st.session_state["extracted"] = extract_slots(chat_text, members, base_date, demo_key=demo_key)
+                st.session_state["schedule_extracted"] = extract_slots(chat_text, members, base_date, demo_key=demo_key)
             except LLMError as e:
                 st.error(str(e))
 
-    ext = st.session_state.get("extracted")
+    ext = st.session_state.get("schedule_extracted")
     if ext:
         st.markdown("**AI가 뽑은 시간** — 틀린 곳은 표에서 직접 고치거나 행을 추가·삭제하세요.")
         edited = slot_editor(slots_to_df(ext["slots"]), key="chat_editor")
