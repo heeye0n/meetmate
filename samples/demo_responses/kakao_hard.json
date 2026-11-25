@@ -1,0 +1,18 @@
+{
+  "slots": [
+    {"member": "지은", "day": "MON", "start": "09:00", "end": "22:00", "type": "unavailable", "evidence": "난 월수금은 거의 안 되고 화목은 저녁이면 됨"},
+    {"member": "지은", "day": "WED", "start": "09:00", "end": "22:00", "type": "unavailable", "evidence": "난 월수금은 거의 안 되고 화목은 저녁이면 됨"},
+    {"member": "지은", "day": "FRI", "start": "09:00", "end": "22:00", "type": "unavailable", "evidence": "난 월수금은 거의 안 되고 화목은 저녁이면 됨"},
+    {"member": "지은", "day": "TUE", "start": "18:00", "end": "22:00", "type": "available", "evidence": "난 월수금은 거의 안 되고 화목은 저녁이면 됨"},
+    {"member": "지은", "day": "THU", "start": "18:00", "end": "22:00", "type": "available", "evidence": "난 월수금은 거의 안 되고 화목은 저녁이면 됨"},
+    {"member": "희연", "day": "THU", "start": "18:00", "end": "21:00", "type": "available", "evidence": "나 목요일 저녁 되는데 늦게는 힘들어 9시 전엔 끝내야 해"},
+    {"member": "도윤", "day": "TUE", "start": "18:00", "end": "22:00", "type": "unavailable", "evidence": "아 잠만 화요일 팀플 다른 거 있네 화요일 취소 ㅠ"},
+    {"member": "민수", "day": "THU", "start": "09:00", "end": "18:30", "type": "unavailable", "evidence": "나는 아무 때나 괜찮음 근데 목요일 6시 반까지는 수업"}
+  ],
+  "notes": [
+    "도윤: '화요일 저녁 ㄱㄴ'을 나중에 '화요일 취소'로 번복 → 화요일 저녁을 불가능으로 기록",
+    "민수: '아무 때나 괜찮음'이라 불가능 시간(목 18:30 전)만 기록",
+    "도윤 '목요일 ㅇㅋ', 희연 👍 는 지은의 '목요일 7시' 제안에 동의한 것으로 보고 슬롯을 만들지 않음",
+    "데모 응답입니다 (API를 호출하지 않음)"
+  ]
+}

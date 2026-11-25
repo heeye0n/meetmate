@@ -1,0 +1,20 @@
+{
+  "decisions": [
+    {"text": "로그인 기능은 최종 범위에서 제외한다", "evidence": "결정: 로그인 기능은 최종 범위에서 제외한다."},
+    {"text": "리허설 날짜는 다음 회의에서 정한다", "evidence": "날짜는 다음 회의에서 정하기로 함."}
+  ],
+  "actions": [
+    {"task": "DB 테이블 정의서 수정하기", "assignee": "지은", "due_text": "금요일까지", "priority": "보통",
+     "evidence": "지은이 DB 테이블 정의서를 금요일까지 수정하기로 함."},
+    {"task": "API 명세서 정리해서 노션에 올리기", "assignee": "희연", "due_text": "다음 주 월요일까지", "priority": "보통",
+     "evidence": "희연은 API 명세서를 다음 주 월요일까지 정리해서 노션에 올리기로 함."},
+    {"task": "메인 화면 UI 시안 2개 만들기", "assignee": "도윤", "due_text": "다음 회의 전", "priority": "보통",
+     "evidence": "도윤이 메인 화면 UI 시안 2개 만들어 오기로 함. (마감은 다음 회의 전)"},
+    {"task": "발표 자료 담당자 정하기", "assignee": "미정", "due_text": "", "priority": "높음",
+     "evidence": "발표 자료는 누가 할지 아직 못 정함."},
+    {"task": "깃허브 브랜치 규칙 정리해서 공유하기", "assignee": "민수", "due_text": "", "priority": "보통",
+     "evidence": "민수가 깃허브 저장소 브랜치 규칙을 정리해서 공유하기로 함."},
+    {"task": "리허설 날짜 정하기", "assignee": "미정", "due_text": "다음 회의", "priority": "높음",
+     "evidence": "리허설은 발표 전 주말에 한 번 하자는 의견이 나왔지만 날짜는 다음 회의에서 정하기로 함."}
+  ]
+}

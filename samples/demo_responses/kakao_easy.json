@@ -1,0 +1,13 @@
+{
+  "slots": [
+    {"member": "민수", "day": "TUE", "start": "15:00", "end": "22:00", "type": "available", "evidence": "나는 화요일 3시 이후랑 목요일 오후 다 괜찮아"},
+    {"member": "민수", "day": "THU", "start": "13:00", "end": "18:00", "type": "available", "evidence": "나는 화요일 3시 이후랑 목요일 오후 다 괜찮아"},
+    {"member": "지은", "day": "TUE", "start": "17:00", "end": "22:00", "type": "available", "evidence": "나 화요일은 5시까지 수업이라 5시 이후 가능"},
+    {"member": "지은", "day": "THU", "start": "09:00", "end": "22:00", "type": "unavailable", "evidence": "목요일은 알바 있어서 안 돼"},
+    {"member": "희연", "day": "TUE", "start": "18:00", "end": "22:00", "type": "available", "evidence": "화요일 저녁 괜찮고 수요일 오전도 돼"},
+    {"member": "희연", "day": "WED", "start": "09:00", "end": "12:00", "type": "available", "evidence": "화요일 저녁 괜찮고 수요일 오전도 돼"},
+    {"member": "도윤", "day": "TUE", "start": "09:00", "end": "19:00", "type": "available", "evidence": "화요일 7시 전까지만 가능해"},
+    {"member": "도윤", "day": "WED", "start": "09:00", "end": "22:00", "type": "available", "evidence": "수요일은 하루 종일 비어 있음"}
+  ],
+  "notes": ["데모 응답입니다 (API를 호출하지 않음)"]
+}
